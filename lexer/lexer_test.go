@@ -66,6 +66,7 @@ func TestLex(t *testing.T) {
 				{FilePos{1, 1}, ItemEOF, ""},
 			},
 		},
+
 		{";;;",
 			[]Item{
 				{FilePos{1, 1}, ItemEOL, ";"},
@@ -74,6 +75,7 @@ func TestLex(t *testing.T) {
 				{FilePos{4, 1}, ItemEOF, ""},
 			},
 		},
+
 		{"\n;;\n;",
 			[]Item{
 				{FilePos{1, 1}, ItemEOL, "\n"},
@@ -82,6 +84,12 @@ func TestLex(t *testing.T) {
 				{FilePos{3, 2}, ItemEOL, "\n"},
 				{FilePos{1, 3}, ItemEOL, ";"},
 				{FilePos{2, 3}, ItemEOF, ""},
+			},
+		},
+
+		{"\t \t \t",
+			[]Item{
+				{FilePos{6, 1}, ItemEOF, ""},
 			},
 		},
 	}

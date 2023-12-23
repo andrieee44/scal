@@ -2,6 +2,7 @@ package lexer
 
 import (
 	"fmt"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -26,6 +27,7 @@ type lexer struct {
 
 type stateFn func(*lexer) stateFn
 
+//go:generate stringer -type=ItemType
 const (
 	ItemEOF ItemType = iota
 	ItemEOL
@@ -35,7 +37,11 @@ const (
 )
 
 func (item Item) String() string {
-	return fmt.Sprintf("%d:%d: %d %q", item.Pos.X, item.Pos.Y, item.Type, item.Value)
+	if item.Type == ItemEOF {
+		item.Value = "EOF"
+	}
+
+	return fmt.Sprintf("%d:%d (%s) %q", item.Pos.X, item.Pos.Y, item.Type.String(), item.Value)
 }
 
 func Lex(input string) chan Item {
@@ -68,8 +74,21 @@ func next(l *lexer) rune {
 	return r
 }
 
+func prev(l *lexer) {
+	l.index -= l.width
+}
+
+func peek(l *lexer) rune {
+	var r rune
+
+	r = next(l)
+	prev(l)
+	return r
+}
+
 func skip(l *lexer) {
 	l.start = l.index
+	l.startPos = l.indexPos
 }
 
 func emit(l *lexer, typ ItemType) {
@@ -84,7 +103,11 @@ func emit(l *lexer, typ ItemType) {
 }
 
 func start(l *lexer) stateFn {
-	switch next(l) {
+	var r rune
+
+	r = next(l)
+
+	switch r {
 	case eof:
 		emit(l, ItemEOF)
 		return nil
@@ -94,6 +117,10 @@ func start(l *lexer) stateFn {
 		emit(l, ItemEOL)
 	case ';':
 		emit(l, ItemEOL)
+	}
+
+	if unicode.IsSpace(r) {
+		skip(l)
 	}
 
 	return start
