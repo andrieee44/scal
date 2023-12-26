@@ -87,9 +87,27 @@ func TestLex(t *testing.T) {
 			},
 		},
 
-		{"\t \t \t",
+		{"\t \v \f \r",
 			[]Item{
-				{FilePos{6, 1}, ItemEOF, ""},
+				{FilePos{8, 1}, ItemEOF, ""},
+			},
+		},
+
+		{"+123456",
+			[]Item{
+				{FilePos{1, 1}, ItemNumber, "+123456"},
+				{FilePos{8, 1}, ItemEOF, ""},
+			},
+		},
+
+		{"123;+456\n-789",
+			[]Item{
+				{FilePos{1, 1}, ItemNumber, "123"},
+				{FilePos{4, 1}, ItemEOL, ";"},
+				{FilePos{5, 1}, ItemNumber, "+456"},
+				{FilePos{9, 1}, ItemEOL, "\n"},
+				{FilePos{1, 2}, ItemNumber, "-789"},
+				{FilePos{5, 2}, ItemEOF, ""},
 			},
 		},
 	}

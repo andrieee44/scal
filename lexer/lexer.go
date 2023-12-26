@@ -2,6 +2,7 @@ package lexer
 
 import (
 	"fmt"
+	"strings"
 	"unicode"
 	"unicode/utf8"
 )
@@ -32,8 +33,11 @@ const (
 	ItemEOF ItemType = iota
 	ItemEOL
 	ItemError
+	ItemNumber
 
-	eof rune = 0
+	eof    rune   = 0
+	digits string = "0123456789"
+	signs  string = "+-"
 )
 
 func (item Item) String() string {
@@ -55,7 +59,6 @@ func Lex(input string) chan Item {
 
 	l.startPos = l.indexPos
 	go run(l)
-
 	return l.items
 }
 
@@ -70,12 +73,12 @@ func next(l *lexer) rune {
 	r, l.width = utf8.DecodeRuneInString(l.input[l.index:])
 	l.index += l.width
 	l.indexPos.X += l.width
-
 	return r
 }
 
 func prev(l *lexer) {
 	l.index -= l.width
+	l.indexPos.X -= l.width
 }
 
 func peek(l *lexer) rune {
@@ -91,6 +94,16 @@ func skip(l *lexer) {
 	l.startPos = l.indexPos
 }
 
+func consume(l *lexer, match string) int {
+	var n int
+
+	for n = 0; strings.IndexRune(match, next(l)) != -1; n++ {
+	}
+
+	prev(l)
+	return n
+}
+
 func emit(l *lexer, typ ItemType) {
 	l.items <- Item{
 		Pos:   l.startPos,
@@ -102,24 +115,45 @@ func emit(l *lexer, typ ItemType) {
 	l.start = l.index
 }
 
+func die(l *lexer, msg string) stateFn {
+	l.items <- Item{
+		Pos:   l.startPos,
+		Type:  ItemError,
+		Value: msg,
+	}
+
+	return nil
+}
+
+func number(l *lexer) stateFn {
+	consume(l, signs)
+	if consume(l, digits) == 0 {
+		return die(l, "expected a number")
+	}
+
+	emit(l, ItemNumber)
+	return start
+}
+
 func start(l *lexer) stateFn {
 	var r rune
 
 	r = next(l)
 
-	switch r {
-	case eof:
+	switch {
+	case r == eof:
 		emit(l, ItemEOF)
 		return nil
-	case '\n':
+	case r == '\n':
 		l.indexPos.X = 1
 		l.indexPos.Y++
 		emit(l, ItemEOL)
-	case ';':
+	case r == ';':
 		emit(l, ItemEOL)
-	}
-
-	if unicode.IsSpace(r) {
+	case strings.IndexRune(signs, r) != -1, strings.IndexRune(digits, r) != -1:
+		prev(l)
+		return number(l)
+	case unicode.IsSpace(r):
 		skip(l)
 	}
 
