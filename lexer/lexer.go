@@ -36,8 +36,8 @@ const (
 	ItemNumber
 	ItemOperator
 
-	ErrorNumber string = "expected a number"
-	ErrorIllegal string = "illegal character"
+	ErrorNumber     string = "expected a number"
+	ErrorUnexpected string = "unexpected character"
 
 	eof       rune   = 0
 	digits    string = "0123456789"
@@ -130,8 +130,19 @@ func die(l *lexer, errMsg string) stateFn {
 	return nil
 }
 
+func space(l *lexer) {
+	var r rune
+
+	for r = next(l); r != '\n' && unicode.IsSpace(r); r = next(l) {
+		skip(l)
+	}
+
+	prev(l)
+}
+
 func operator(l *lexer) stateFn {
 	emit(l, ItemOperator)
+	space(l)
 	return number
 }
 
@@ -142,6 +153,7 @@ func number(l *lexer) stateFn {
 
 	emit(l, ItemNumber)
 
+	space(l)
 	if strings.IndexRune(operators, next(l)) != -1 {
 		return operator
 	}
@@ -153,25 +165,24 @@ func number(l *lexer) stateFn {
 func start(l *lexer) stateFn {
 	var r rune
 
+	space(l)
 	r = next(l)
 
 	switch {
-	case r == eof:
-		emit(l, ItemEOF)
-		return nil
+	case strings.IndexRune(signs, r) != -1, strings.IndexRune(digits, r) != -1:
+		prev(l)
+		return number(l)
 	case r == '\n':
 		l.indexPos.X = 1
 		l.indexPos.Y++
 		emit(l, ItemEOL)
 	case r == ';':
 		emit(l, ItemEOL)
-	case strings.IndexRune(signs, r) != -1, strings.IndexRune(digits, r) != -1:
-		prev(l)
-		return number(l)
-	case unicode.IsSpace(r):
-		skip(l)
+	case r == eof:
+		emit(l, ItemEOF)
+		return nil
 	default:
-		return die(l, ErrorIllegal)
+		return die(l, ErrorUnexpected)
 	}
 
 	return start

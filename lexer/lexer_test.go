@@ -147,6 +147,21 @@ func TestLex(t *testing.T) {
 			},
 		},
 
+		{"12 + 34 - 56 * 78 / 9",
+			[]Item{
+				{FilePos{1, 1}, ItemNumber, "12"},
+				{FilePos{4, 1}, ItemOperator, "+"},
+				{FilePos{6, 1}, ItemNumber, "34"},
+				{FilePos{9, 1}, ItemOperator, "-"},
+				{FilePos{11, 1}, ItemNumber, "56"},
+				{FilePos{14, 1}, ItemOperator, "*"},
+				{FilePos{16, 1}, ItemNumber, "78"},
+				{FilePos{19, 1}, ItemOperator, "/"},
+				{FilePos{21, 1}, ItemNumber, "9"},
+				{FilePos{22, 1}, ItemEOF, ""},
+			},
+		},
+
 		{"+12+-34-+56*-78/+9",
 			[]Item{
 				{FilePos{1, 1}, ItemNumber, "+12"},
@@ -159,6 +174,29 @@ func TestLex(t *testing.T) {
 				{FilePos{16, 1}, ItemOperator, "/"},
 				{FilePos{17, 1}, ItemNumber, "+9"},
 				{FilePos{19, 1}, ItemEOF, ""},
+			},
+		},
+
+		{"+12 + -34 - +56 * -78 / +9",
+			[]Item{
+				{FilePos{1, 1}, ItemNumber, "+12"},
+				{FilePos{5, 1}, ItemOperator, "+"},
+				{FilePos{7, 1}, ItemNumber, "-34"},
+				{FilePos{11, 1}, ItemOperator, "-"},
+				{FilePos{13, 1}, ItemNumber, "+56"},
+				{FilePos{17, 1}, ItemOperator, "*"},
+				{FilePos{19, 1}, ItemNumber, "-78"},
+				{FilePos{23, 1}, ItemOperator, "/"},
+				{FilePos{25, 1}, ItemNumber, "+9"},
+				{FilePos{27, 1}, ItemEOF, ""},
+			},
+		},
+
+		{" 1+\n123",
+			[]Item{
+				{FilePos{2, 1}, ItemNumber, "1"},
+				{FilePos{3, 1}, ItemOperator, "+"},
+				{FilePos{4, 1}, ItemError, ErrorNumber},
 			},
 		},
 	}
