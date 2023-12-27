@@ -34,10 +34,15 @@ const (
 	ItemEOL
 	ItemError
 	ItemNumber
+	ItemOperator
 
-	eof    rune   = 0
-	digits string = "0123456789"
-	signs  string = "+-"
+	ErrorNumber string = "expected a number"
+	ErrorIllegal string = "illegal character"
+
+	eof       rune   = 0
+	digits    string = "0123456789"
+	signs     string = "+-"
+	operators string = "+-*/"
 )
 
 func (item Item) String() string {
@@ -115,23 +120,33 @@ func emit(l *lexer, typ ItemType) {
 	l.start = l.index
 }
 
-func die(l *lexer, msg string) stateFn {
+func die(l *lexer, errMsg string) stateFn {
 	l.items <- Item{
 		Pos:   l.startPos,
 		Type:  ItemError,
-		Value: msg,
+		Value: errMsg,
 	}
 
 	return nil
 }
 
+func operator(l *lexer) stateFn {
+	emit(l, ItemOperator)
+	return number
+}
+
 func number(l *lexer) stateFn {
-	consume(l, signs)
-	if consume(l, digits) == 0 {
-		return die(l, "expected a number")
+	if consume(l, signs) > 1 || consume(l, digits) == 0 {
+		return die(l, ErrorNumber)
 	}
 
 	emit(l, ItemNumber)
+
+	if strings.IndexRune(operators, next(l)) != -1 {
+		return operator
+	}
+
+	prev(l)
 	return start
 }
 
@@ -155,6 +170,8 @@ func start(l *lexer) stateFn {
 		return number(l)
 	case unicode.IsSpace(r):
 		skip(l)
+	default:
+		return die(l, ErrorIllegal)
 	}
 
 	return start

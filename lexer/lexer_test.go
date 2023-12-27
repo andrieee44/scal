@@ -110,6 +110,57 @@ func TestLex(t *testing.T) {
 				{FilePos{5, 2}, ItemEOF, ""},
 			},
 		},
+
+		{"+",
+			[]Item{
+				{FilePos{1, 1}, ItemError, ErrorNumber},
+			},
+		},
+
+		{"+-123456",
+			[]Item{
+				{FilePos{1, 1}, ItemError, ErrorNumber},
+			},
+		},
+
+		{"1+2",
+			[]Item{
+				{FilePos{1, 1}, ItemNumber, "1"},
+				{FilePos{2, 1}, ItemOperator, "+"},
+				{FilePos{3, 1}, ItemNumber, "2"},
+				{FilePos{4, 1}, ItemEOF, ""},
+			},
+		},
+
+		{"12+34-56*78/9",
+			[]Item{
+				{FilePos{1, 1}, ItemNumber, "12"},
+				{FilePos{3, 1}, ItemOperator, "+"},
+				{FilePos{4, 1}, ItemNumber, "34"},
+				{FilePos{6, 1}, ItemOperator, "-"},
+				{FilePos{7, 1}, ItemNumber, "56"},
+				{FilePos{9, 1}, ItemOperator, "*"},
+				{FilePos{10, 1}, ItemNumber, "78"},
+				{FilePos{12, 1}, ItemOperator, "/"},
+				{FilePos{13, 1}, ItemNumber, "9"},
+				{FilePos{14, 1}, ItemEOF, ""},
+			},
+		},
+
+		{"+12+-34-+56*-78/+9",
+			[]Item{
+				{FilePos{1, 1}, ItemNumber, "+12"},
+				{FilePos{4, 1}, ItemOperator, "+"},
+				{FilePos{5, 1}, ItemNumber, "-34"},
+				{FilePos{8, 1}, ItemOperator, "-"},
+				{FilePos{9, 1}, ItemNumber, "+56"},
+				{FilePos{12, 1}, ItemOperator, "*"},
+				{FilePos{13, 1}, ItemNumber, "-78"},
+				{FilePos{16, 1}, ItemOperator, "/"},
+				{FilePos{17, 1}, ItemNumber, "+9"},
+				{FilePos{19, 1}, ItemEOF, ""},
+			},
+		},
 	}
 
 	for _, test = range tests {

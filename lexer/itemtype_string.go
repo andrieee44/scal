@@ -12,11 +12,12 @@ func _() {
 	_ = x[ItemEOL-1]
 	_ = x[ItemError-2]
 	_ = x[ItemNumber-3]
+	_ = x[ItemOperator-4]
 }
 
-const _ItemType_name = "ItemEOFItemEOLItemErrorItemNumber"
+const _ItemType_name = "ItemEOFItemEOLItemErrorItemNumberItemOperator"
 
-var _ItemType_index = [...]uint8{0, 7, 14, 23, 33}
+var _ItemType_index = [...]uint8{0, 7, 14, 23, 33, 45}
 
 func (i ItemType) String() string {
 	if i < 0 || i >= ItemType(len(_ItemType_index)-1) {
