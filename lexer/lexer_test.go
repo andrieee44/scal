@@ -199,6 +199,34 @@ func TestLex(t *testing.T) {
 				{FilePos{4, 1}, ItemError, ErrorNumber},
 			},
 		},
+
+		{"-0X123",
+			[]Item{
+				{FilePos{1, 1}, ItemNumber, "-0X123"},
+				{FilePos{7, 1}, ItemEOF, ""},
+			},
+		},
+
+		{"0x",
+			[]Item{
+				{FilePos{1, 1}, ItemError, ErrorHexNoDigits},
+			},
+		},
+
+		{"+0x12 + -0X34 - +0x56 * -0X78 / +0x9",
+			[]Item{
+				{FilePos{1, 1}, ItemNumber, "+0x12"},
+				{FilePos{7, 1}, ItemOperator, "+"},
+				{FilePos{9, 1}, ItemNumber, "-0X34"},
+				{FilePos{15, 1}, ItemOperator, "-"},
+				{FilePos{17, 1}, ItemNumber, "+0x56"},
+				{FilePos{23, 1}, ItemOperator, "*"},
+				{FilePos{25, 1}, ItemNumber, "-0X78"},
+				{FilePos{31, 1}, ItemOperator, "/"},
+				{FilePos{33, 1}, ItemNumber, "+0x9"},
+				{FilePos{37, 1}, ItemEOF, ""},
+			},
+		},
 	}
 
 	for _, test = range tests {

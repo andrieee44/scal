@@ -36,13 +36,16 @@ const (
 	ItemNumber
 	ItemOperator
 
-	ErrorNumber     string = "expected a number"
-	ErrorUnexpected string = "unexpected character"
+	ErrorNumber      string = "expected a number"
+	ErrorHexNoDigits string = "hexadecmial has no numbers"
+	ErrorUnexpected  string = "unexpected character"
 
 	eof       rune   = 0
 	digits    string = "0123456789"
 	signs     string = "+-"
 	operators string = "+-*/"
+	hexPrefix string = "Xx"
+	hex       string = digits + "ABCDEFabcdef"
 )
 
 func (item Item) String() string {
@@ -99,13 +102,21 @@ func skip(l *lexer) {
 	l.startPos = l.indexPos
 }
 
-func consume(l *lexer, match string) int {
-	var n int
-
-	for n = 0; strings.IndexRune(match, next(l)) != -1; n++ {
+func consume(l *lexer, match string) bool {
+	if strings.IndexRune(match, next(l)) != -1 {
+		return true
 	}
 
 	prev(l)
+	return false
+}
+
+func consumeAll(l *lexer, match string) int {
+	var n int
+
+	for n = 0; consume(l, match); n++ {
+	}
+
 	return n
 }
 
@@ -147,38 +158,43 @@ func operator(l *lexer) stateFn {
 }
 
 func number(l *lexer) stateFn {
-	if consume(l, signs) > 1 || consume(l, digits) == 0 {
+	if consumeAll(l, signs) > 1 {
+		return die(l, ErrorNumber)
+	}
+
+	switch {
+	case consume(l, "0") && consume(l, hexPrefix):
+		if consumeAll(l, hex) == 0 {
+			return die(l, ErrorHexNoDigits)
+		}
+	case consumeAll(l, digits) == 0:
 		return die(l, ErrorNumber)
 	}
 
 	emit(l, ItemNumber)
 
 	space(l)
-	if strings.IndexRune(operators, next(l)) != -1 {
+	if consume(l, operators) {
 		return operator
 	}
 
-	prev(l)
 	return start
 }
 
 func start(l *lexer) stateFn {
-	var r rune
-
 	space(l)
-	r = next(l)
 
 	switch {
-	case strings.IndexRune(signs, r) != -1, strings.IndexRune(digits, r) != -1:
+	case consume(l, signs), consume(l, digits):
 		prev(l)
 		return number(l)
-	case r == '\n':
+	case consume(l, "\n"):
 		l.indexPos.X = 1
 		l.indexPos.Y++
 		emit(l, ItemEOL)
-	case r == ';':
+	case consume(l, ";"):
 		emit(l, ItemEOL)
-	case r == eof:
+	case consume(l, string(eof)):
 		emit(l, ItemEOF)
 		return nil
 	default:
