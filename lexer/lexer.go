@@ -175,11 +175,22 @@ func operator(l *lexer) stateFn {
 
 }
 
+func decimalFloat(l *lexer) stateFn {
+	consumeAll(l, digits)
+	emit(l, ItemDecimal)
+	return operator
+}
+
 func decimal(l *lexer) stateFn {
 	if consumeAll(l, digits) == 0 {
 		return die(l, ErrorExpectedNumber)
 	}
 
+	if consume(l, ".") {
+		return decimalFloat
+	}
+
+	consumeAll(l, digits)
 	emit(l, ItemDecimal)
 	return operator
 }
@@ -212,6 +223,10 @@ func number(l *lexer) stateFn {
 
 	if consume(l, hexPrefix) {
 		return hex
+	}
+
+	if consume(l, ".") {
+		return decimalFloat
 	}
 
 	return octal

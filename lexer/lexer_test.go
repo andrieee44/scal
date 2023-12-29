@@ -248,6 +248,33 @@ func TestLex(t *testing.T) {
 				{FilePos{37, 1}, ItemEOF, ""},
 			},
 		},
+
+		{"0.",
+			[]Item{
+				{FilePos{1, 1}, ItemDecimal, "0."},
+				{FilePos{3, 1}, ItemEOF, ""},
+			},
+		},
+
+		{"0.123",
+			[]Item{
+				{FilePos{1, 1}, ItemDecimal, "0.123"},
+				{FilePos{6, 1}, ItemEOF, ""},
+			},
+		},
+
+		{"1.2; 0. / 0XA * 0023",
+			[]Item{
+				{FilePos{1, 1}, ItemDecimal, "1.2"},
+				{FilePos{4, 1}, ItemEOL, ";"},
+				{FilePos{6, 1}, ItemDecimal, "0."},
+				{FilePos{9, 1}, ItemOperator, "/"},
+				{FilePos{11, 1}, ItemHexadecimal, "0XA"},
+				{FilePos{15, 1}, ItemOperator, "*"},
+				{FilePos{17, 1}, ItemOctal, "0023"},
+				{FilePos{21, 1}, ItemEOF, ""},
+			},
+		},
 	}
 
 	for _, test = range tests {
