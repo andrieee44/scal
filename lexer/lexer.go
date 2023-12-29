@@ -33,19 +33,25 @@ const (
 	ItemEOF ItemType = iota
 	ItemEOL
 	ItemError
-	ItemNumber
+	ItemDecimal
+	ItemHexadecimal
+	ItemOctal
 	ItemOperator
 
-	ErrorNumber      string = "expected a number"
-	ErrorHexNoDigits string = "hexadecmial has no numbers"
-	ErrorUnexpected  string = "unexpected character"
+	ErrorExpectedNumber      string = "expected a number"
+	ErrorExpectedOperator    string = "expected an operator"
+	ErrorHexadecimalNoDigits string = "hexadecimal has no digits"
+	ErrorInvalidOctalDigit   string = "invalid octal digit"
+	ErrorUnexpectedCharacter string = "unexpected character"
 
-	eof       rune   = 0
-	digits    string = "0123456789"
-	signs     string = "+-"
-	operators string = "+-*/"
-	hexPrefix string = "Xx"
-	hex       string = digits + "ABCDEFabcdef"
+	eof               rune   = 0
+	octalDigits       string = "01234567"
+	digits            string = octalDigits + "89"
+	hexadecimalDigits string = digits + "ABCDEFabcdef"
+	alphaNum          string = hexadecimalDigits + "GHIJKLMNOPQRSTUVWXYZghijklmnopqrstuvwxyz"
+	signs             string = "+-"
+	operators         string = "+-*/"
+	hexPrefix         string = "Xx"
 )
 
 func (item Item) String() string {
@@ -152,33 +158,63 @@ func space(l *lexer) {
 }
 
 func operator(l *lexer) stateFn {
-	emit(l, ItemOperator)
 	space(l)
-	return number
+
+	if consume(l, operators) {
+		emit(l, ItemOperator)
+		space(l)
+		return number
+	}
+
+	if consume(l, "\n;"+string(eof)) {
+		prev(l)
+		return start
+	}
+
+	return die(l, ErrorExpectedOperator)
+
 }
 
-func number(l *lexer) stateFn {
-	if consumeAll(l, signs) > 1 {
-		return die(l, ErrorNumber)
+func decimal(l *lexer) stateFn {
+	if consumeAll(l, digits) == 0 {
+		return die(l, ErrorExpectedNumber)
 	}
 
-	switch {
-	case consume(l, "0") && consume(l, hexPrefix):
-		if consumeAll(l, hex) == 0 {
-			return die(l, ErrorHexNoDigits)
-		}
-	case consumeAll(l, digits) == 0:
-		return die(l, ErrorNumber)
+	emit(l, ItemDecimal)
+	return operator
+}
+
+func hex(l *lexer) stateFn {
+	if consumeAll(l, hexadecimalDigits) == 0 {
+		return die(l, ErrorHexadecimalNoDigits)
 	}
 
-	emit(l, ItemNumber)
+	emit(l, ItemHexadecimal)
+	return operator
+}
 
-	space(l)
-	if consume(l, operators) {
+func octal(l *lexer) stateFn {
+	if consumeAll(l, octalDigits) == 0 || consumeAll(l, digits) != 0 {
+		emit(l, ItemDecimal)
 		return operator
 	}
 
-	return start
+	emit(l, ItemOctal)
+	return operator
+}
+
+func number(l *lexer) stateFn {
+	consume(l, signs)
+
+	if !consume(l, "0") {
+		return decimal
+	}
+
+	if consume(l, hexPrefix) {
+		return hex
+	}
+
+	return octal
 }
 
 func start(l *lexer) stateFn {
@@ -198,7 +234,7 @@ func start(l *lexer) stateFn {
 		emit(l, ItemEOF)
 		return nil
 	default:
-		return die(l, ErrorUnexpected)
+		return die(l, ErrorUnexpectedCharacter)
 	}
 
 	return start
