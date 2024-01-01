@@ -38,20 +38,23 @@ const (
 	ItemOctal
 	ItemOperator
 
-	ErrorExpectedNumber      string = "expected a number"
-	ErrorExpectedOperator    string = "expected an operator"
-	ErrorHexadecimalNoDigits string = "hexadecimal has no digits"
-	ErrorInvalidOctalDigit   string = "invalid octal digit"
-	ErrorUnexpectedCharacter string = "unexpected character"
+	ErrorExpectedNumber           string = "expected a number"
+	ErrorExpectedOperator         string = "expected an operator"
+	ErrorHexadecimalNoDigits      string = "hexadecimal has no digits"
+	ErrorHexadecimalNeedsExponent string = "hexadecimal needs exponent"
+	ErrorExponentNoDigits         string = "exponent has no digits"
+	ErrorInvalidOctalDigit        string = "invalid octal digit"
+	ErrorUnexpectedCharacter      string = "unexpected character"
 
-	eof               rune   = 0
-	octalDigits       string = "01234567"
-	digits            string = octalDigits + "89"
-	hexadecimalDigits string = digits + "ABCDEFabcdef"
-	alphaNum          string = hexadecimalDigits + "GHIJKLMNOPQRSTUVWXYZghijklmnopqrstuvwxyz"
-	signs             string = "+-"
-	operators         string = "+-*/"
-	hexPrefix         string = "Xx"
+	eof                 rune   = 0
+	octalDigits         string = "01234567"
+	digits              string = octalDigits + "89"
+	hexadecimalDigits   string = digits + "ABCDEFabcdef"
+	alphaNum            string = hexadecimalDigits + "GHIJKLMNOPQRSTUVWXYZghijklmnopqrstuvwxyz"
+	signs               string = "+-"
+	operators           string = "+-*/"
+	hexadecimalPrefix   string = "Xx"
+	hexadecimalExponent string = "Pp"
 )
 
 func (item Item) String() string {
@@ -195,10 +198,32 @@ func decimal(l *lexer) stateFn {
 	return operator
 }
 
-func hex(l *lexer) stateFn {
+func hexadecimal(l *lexer) stateFn {
+	var needExponent bool
+
 	if consumeAll(l, hexadecimalDigits) == 0 {
 		return die(l, ErrorHexadecimalNoDigits)
 	}
+
+	if consume(l, ".") {
+		needExponent = true
+		consumeAll(l, hexadecimalDigits)
+	}
+
+	if !consume(l, hexadecimalExponent) {
+		if needExponent {
+			return die(l, ErrorHexadecimalNeedsExponent)
+		}
+
+		goto EMIT
+	}
+
+	consume(l, signs)
+	if consumeAll(l, digits) == 0 {
+		return die(l, ErrorExponentNoDigits)
+	}
+
+EMIT:
 
 	emit(l, ItemHexadecimal)
 	return operator
@@ -221,8 +246,8 @@ func number(l *lexer) stateFn {
 		return decimal
 	}
 
-	if consume(l, hexPrefix) {
-		return hex
+	if consume(l, hexadecimalPrefix) {
+		return hexadecimal
 	}
 
 	if consume(l, ".") {

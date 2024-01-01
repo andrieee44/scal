@@ -275,6 +275,25 @@ func TestLex(t *testing.T) {
 				{FilePos{21, 1}, ItemEOF, ""},
 			},
 		},
+
+		{"0x1.1",
+			[]Item{
+				{FilePos{1, 1}, ItemError, ErrorHexadecimalNeedsExponent},
+			},
+		},
+
+		{"0xa.aP",
+			[]Item{
+				{FilePos{1, 1}, ItemError, ErrorExponentNoDigits},
+			},
+		},
+
+		{"0XA.5P1",
+			[]Item{
+				{FilePos{1, 1}, ItemHexadecimal, "0XA.5P1"},
+				{FilePos{8, 1}, ItemEOF, ""},
+			},
+		},
 	}
 
 	for _, test = range tests {
